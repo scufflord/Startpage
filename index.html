@@ -78,6 +78,19 @@
     <label for="autoThemeToggle">Auto theme from background</label>
   </div>
   <br>
+  <h3>Weather Settings</h3>
+  <div class="section">
+    <label for="weatherLat">Latitude
+      <input id="weatherLat" type="text" placeholder="e.g. 35.1401" aria-label="Weather latitude">
+    </label>
+    <label for="weatherLon">Longitude
+      <input id="weatherLon" type="text" placeholder="e.g. -93.9216" aria-label="Weather longitude">
+    </label>
+    <div class="actions-row" style="margin-top:0.5rem;">
+      <button id="useGeoBtn" type="button" aria-label="Use browser location">Use my location</button>
+      <button id="saveWeatherBtn" type="button" aria-label="Save weather location">Save Location</button>
+    </div>
+  </div>
   <h3>Custom Theme Editor</h3>
   <div id="themeEditor">
     <label for="var-bg">--bg<input id="var-bg" type="color" data-var="--bg"></label>
