@@ -1,4 +1,4 @@
-# Startpage — Dynamic Font Colors
+# Startpage
 
 Minimal personal startpage with theme support, bookmarks, and configurable background.
 
@@ -8,11 +8,10 @@ Quick start
 - Customize themes via the dropdown or the custom theme editor in the Config modal.
 - Bookmarks are editable in the Config modal and persisted to `localStorage`.
 
-What I changed for open-source friendliness
+What is this project:
 
-- Separated inline CSS into `css/styles.css` and JS into `js/script.js`.
-- Added basic accessibility hooks and safer element access in JS.
-- Included `LICENSE` (MIT) and `CONTRIBUTING.md` for community contributions.
+I got bored one night and wanted a start page for my browser. I got overwhelmed with all of the different options and thought "Man it would be funny to see what AI can do." And here we are now...
+
 
 Contributing
 

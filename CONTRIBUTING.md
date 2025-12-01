@@ -12,5 +12,5 @@ You can preview the page by opening `startpage.html` in your browser. For quick 
 
 ```bash
 python3 -m http.server 8000
-# then open http://localhost:8000/dynamicfontcolors.html
+# then open http://localhost:8000/startpage.html
 ```
