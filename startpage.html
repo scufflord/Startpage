@@ -1,0 +1,131 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Startpage</title>
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="css/styles.css">
+</head>
+<body>
+<div class="translucent-container">
+  <div class="container">
+    <center><h1>Welcome</h1></center>
+    <form class="search-box" action="https://www.google.com/search" method="GET" role="search" aria-label="Search">
+      <label for="searchInput" class="sr-only">Search Google</label>
+      <input id="searchInput" type="text" name="q" placeholder="Search Google..." autocomplete="off" aria-label="Search query" />
+      <button type="submit" aria-label="Submit search">Go</button>
+    </form>
+    <div class="top-info">
+      <div id="clock" class="clock" aria-live="polite"></div>
+      <div id="greeting" class="greeting" aria-live="polite"></div>
+      <div id="weather" class="weather" aria-live="polite">Loading weather...</div>
+    </div>
+    <div class="bookmarks-grid"></div>
+  </div>
+</div>
+
+<div class="bottom-bar">
+  <div class="bottom-left"><button id="configButton" aria-haspopup="dialog" aria-controls="configModal" aria-expanded="false" aria-label="Open configuration">Config ⚙️</button></div>
+  <div class="bottom-center"><span>© 2025 <a href="https://github.com/scufflord/Startpage" target="_blank" rel="noopener noreferrer">Scufflord</a></span></div>
+  <div class="bottom-right">
+    <select id="themeSelector" aria-label="Theme selector">
+      <option value="gruvbox">Gruvbox</option>
+      <option value="darkOcean">Dark Ocean</option>
+      <option value="solarized">Solarized</option>
+      <option value="catppuccinMocha">Catppuccin Mocha</option>
+      <option value="catppuccinLatte">Catppuccin Latte</option>
+      <option value="catppuccinFrappe">Catppuccin Frappe</option>
+    </select>
+  </div>
+</div>
+
+<div id="configModal" aria-hidden="true" role="dialog" aria-label="Configuration modal">
+  <h2>Edit Bookmarks</h2>
+  <div class="modal-grid">
+    <div class="section">
+      <h3>Live Preview</h3>
+      <div id="previewGrid"></div>
+    </div>
+    <div class="section">
+      <h3>Edit Bookmarks</h3>
+      <div id="bookmarkEditor"></div>
+      <div class="actions-row" style="margin-top:0.5rem;">
+        <button id="addBookmark" aria-label="Add bookmark">Add Bookmark</button>
+      </div>
+    </div>
+  </div>
+  <div class="actions-row" style="margin-top:1rem;">
+    <button id="saveBookmarks" aria-label="Save bookmarks">Save Changes</button>
+  </div>
+  <h3>Background Image</h3>
+  <label for="backgroundInput" class="sr-only">Background image URL</label>
+  <input type="text" id="backgroundInput" placeholder="Paste image URL...">
+  <br>
+  <br>
+  <button id="saveBackground" aria-label="Save background">Save Background</button>
+  <br>
+  <br>
+  <h3>Background Gallery</h3>
+  <div id="bgGallery" aria-live="polite" style="margin-bottom:0.5rem;"></div>
+  <div class="bg-upload-row">
+    <label for="bgUpload" class="sr-only">Upload background image</label>
+    <input type="file" id="bgUpload" accept="image/*">
+    <button id="clearBackground" aria-label="Clear background">Clear Background</button>
+  </div>
+  <div style="margin-top:0.5rem;display:flex;align-items:center;gap:0.5rem;">
+    <input type="checkbox" id="autoThemeToggle">
+    <label for="autoThemeToggle">Auto theme from background</label>
+  </div>
+  <br>
+  <h3>Weather Settings</h3>
+  <div class="section">
+    <label for="weatherLat">Latitude
+      <input id="weatherLat" type="text" placeholder="e.g. 35.1401" aria-label="Weather latitude">
+    </label>
+    <label for="weatherLon">Longitude
+      <input id="weatherLon" type="text" placeholder="e.g. -93.9216" aria-label="Weather longitude">
+    </label>
+    <div class="actions-row" style="margin-top:0.5rem;">
+      <button id="useGeoBtn" type="button" aria-label="Use browser location">Use my location</button>
+      <button id="saveWeatherBtn" type="button" aria-label="Save weather location">Save Location</button>
+    </div>
+  </div>
+  <h3>Custom Theme Editor</h3>
+  <div id="themeEditor">
+    <label for="var-bg">--bg<input id="var-bg" type="color" data-var="--bg"></label>
+    <label for="var-fg">--fg<input id="var-fg" type="color" data-var="--fg"></label>
+    <label for="var-accent">--accent<input id="var-accent" type="color" data-var="--accent"></label>
+    <label for="var-secondary">--secondary<input id="var-secondary" type="color" data-var="--secondary"></label>
+    <label for="var-bookmark-bg">--bookmark-bg<input id="var-bookmark-bg" type="color" data-var="--bookmark-bg"></label>
+    <label for="var-bookmark-hover-bg">--bookmark-hover-bg<input id="var-bookmark-hover-bg" type="color" data-var="--bookmark-hover-bg"></label>
+  </div>
+  <h3>Greeting Texts</h3>
+  <div class="section">
+    <label for="greetingMorning">Morning greeting
+      <input id="greetingMorning" type="text" placeholder="Good morning" aria-label="Morning greeting">
+    </label>
+    <label for="greetingAfternoon">Afternoon greeting
+      <input id="greetingAfternoon" type="text" placeholder="Good afternoon" aria-label="Afternoon greeting">
+    </label>
+    <label for="greetingEvening">Evening greeting
+      <input id="greetingEvening" type="text" placeholder="Good evening" aria-label="Evening greeting">
+    </label>
+    <div class="actions-row" style="margin-top:0.5rem;">
+      <button id="resetGreetings" type="button" aria-label="Reset greetings">Reset to defaults</button>
+    </div>
+  </div>
+  <button id="closeConfig" aria-label="Close configuration">Close</button>
+</div>
+
+<script src="js/script.js" defer></script>
+</body>
+
+<!-- Toast for non-blocking actions (undo) -->
+<div id="toast" class="toast" aria-live="polite" aria-atomic="true">
+  <span id="toastMsg"></span>
+  <button id="toastUndo" class="toast-undo" aria-label="Undo">Undo</button>
+</div>
+</html>
+</body>
+</html>

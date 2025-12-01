@@ -47,19 +47,54 @@ function saveGreetingValues(){
   localStorage.setItem('greetings', JSON.stringify(obj));
   updateGreeting();
 }
+
+function loadSavedWeatherLocation(){
+  try{
+    const saved = JSON.parse(localStorage.getItem('weatherLocation') || '{}');
+    if(weatherLatInput) weatherLatInput.value = saved.lat || '';
+    if(weatherLonInput) weatherLonInput.value = saved.lon || '';
+  }catch(e){}
+}
+
+function saveWeatherLocation(){
+  if(!weatherLatInput || !weatherLonInput) return;
+  const latRaw = weatherLatInput.value.trim();
+  const lonRaw = weatherLonInput.value.trim();
+  if(latRaw === '' || lonRaw === ''){ alert('Please enter both latitude and longitude.'); return; }
+  const lat = Number(latRaw); const lon = Number(lonRaw);
+  if(Number.isNaN(lat) || Number.isNaN(lon)){ alert('Latitude and longitude must be valid numbers.'); return; }
+  localStorage.setItem('weatherLocation', JSON.stringify({lat: lat, lon: lon}));
+  // refresh weather immediately
+  loadWeather(lat, lon);
+}
 updateGreeting();
 
 // ---------------- Weather ----------------
-async function loadWeather(){
+async function loadWeather(lat, lon){
   try{
-    const res=await fetch("https://api.open-meteo.com/v1/forecast?latitude=35.1401&longitude=-93.9216&hourly=temperature_2m,weather_code,precipitation_probability");
-    const data=await res.json();
-    const temp=data.hourly.temperature_2m[0]; const precip=data.hourly.precipitation_probability[0]; const code=data.hourly.weather_code[0];
-    const descs={0:"Clear sky",1:"Mostly clear",2:"Partly cloudy",3:"Overcast",45:"Foggy",48:"Rime fog",51:"Light drizzle",53:"Drizzle",55:"Heavy drizzle",61:"Light rain",63:"Rain",65:"Heavy rain",71:"Light snow",73:"Snow",75:"Heavy snow",95:"Thunderstorm"};
-    const wEl = document.getElementById("weather");
-    if(wEl) wEl.textContent = `${descs[code]||"Weather"} • ${Math.round((temp*9/5)+32)}°F (${Math.round(temp)}°C) • ${precip}% rain`;
-  } catch(e){ const wEl = document.getElementById("weather"); if(wEl) wEl.textContent="Weather unavailable"; }
+    // resolve lat/lon: function args -> saved settings -> defaults
+    let latVal = (typeof lat !== 'undefined') ? lat : undefined;
+    let lonVal = (typeof lon !== 'undefined') ? lon : undefined;
+    if(typeof latVal === 'undefined' || typeof lonVal === 'undefined'){
+      try{
+        const saved = JSON.parse(localStorage.getItem('weatherLocation') || '{}');
+        if(typeof latVal === 'undefined' && saved.lat) latVal = saved.lat;
+        if(typeof lonVal === 'undefined' && saved.lon) lonVal = saved.lon;
+      }catch(e){}
+    }
+    if(!latVal || !lonVal){ latVal = 35.1401; lonVal = -93.9216; }
+
+    const url = `https://api.open-meteo.com/v1/forecast?latitude=${encodeURIComponent(latVal)}&longitude=${encodeURIComponent(lonVal)}&hourly=temperature_2m,weather_code,precipitation_probability`;
+    const res = await fetch(url);
+    const data = await res.json();
+    const temp = data.hourly.temperature_2m[0]; const precip = data.hourly.precipitation_probability[0]; const code = data.hourly.weather_code[0];
+    const descs = {0:"Clear sky",1:"Mostly clear",2:"Partly cloudy",3:"Overcast",45:"Foggy",48:"Rime fog",51:"Light drizzle",53:"Drizzle",55:"Heavy drizzle",61:"Light rain",63:"Rain",65:"Heavy rain",71:"Light snow",73:"Snow",75:"Heavy snow",95:"Thunderstorm"};
+    const wEl = document.getElementById('weather');
+    if(wEl) wEl.textContent = `${descs[code]||'Weather'} • ${Math.round((temp*9/5)+32)}°F (${Math.round(temp)}°C) • ${precip}% rain`;
+  } catch(e){ const wEl = document.getElementById('weather'); if(wEl) wEl.textContent = 'Weather unavailable'; }
 }
+
+// initial weather load (will pick saved location if present)
 loadWeather();
 
 // ---------------- Themes ----------------
@@ -151,6 +186,25 @@ if(greetingAfternoonInput) greetingAfternoonInput.addEventListener('input', ()=>
 if(greetingEveningInput) greetingEveningInput.addEventListener('input', ()=>{ saveGreetingValues(); });
 if(resetGreetingsBtn) resetGreetingsBtn.addEventListener('click', ()=>{
   localStorage.removeItem('greetings'); loadSavedGreetings(); updateGreeting();
+});
+
+// Weather location inputs and controls
+const weatherLatInput = document.getElementById('weatherLat');
+const weatherLonInput = document.getElementById('weatherLon');
+const useGeoBtn = document.getElementById('useGeoBtn');
+const saveWeatherBtn = document.getElementById('saveWeatherBtn');
+
+if(saveWeatherBtn) saveWeatherBtn.addEventListener('click', ()=>{ saveWeatherLocation(); });
+if(useGeoBtn) useGeoBtn.addEventListener('click', ()=>{
+  if(!navigator.geolocation){ alert('Geolocation is not available in this browser.'); return; }
+  useGeoBtn.disabled = true;
+  navigator.geolocation.getCurrentPosition(pos=>{
+    const lat = pos.coords.latitude; const lon = pos.coords.longitude;
+    if(weatherLatInput) weatherLatInput.value = String(lat);
+    if(weatherLonInput) weatherLonInput.value = String(lon);
+    saveWeatherLocation();
+    useGeoBtn.disabled = false;
+  }, err=>{ alert('Unable to get location: '+ (err.message || err.code)); useGeoBtn.disabled = false; });
 });
 
 function normalizeUrl(input){
@@ -253,6 +307,7 @@ function openConfigModal(){
   renderEditor();
   renderGallery && renderGallery();
   loadSavedGreetings && loadSavedGreetings();
+  loadSavedWeatherLocation && loadSavedWeatherLocation();
   if(!configModal) return;
   _previouslyFocused = document.activeElement;
   configModal.classList.add('show');
