@@ -51,7 +51,22 @@
   <label for="backgroundInput" class="sr-only">Background image URL</label>
   <input type="text" id="backgroundInput" placeholder="Paste image URL...">
   <br>
+  <br>
   <button id="saveBackground" aria-label="Save background">Save Background</button>
+  <br>
+  <br>
+  <h3>Background Gallery</h3>
+  <div id="bgGallery" aria-live="polite" style="margin-bottom:0.5rem;"></div>
+  <div class="bg-upload-row">
+    <label for="bgUpload" class="sr-only">Upload background image</label>
+    <input type="file" id="bgUpload" accept="image/*">
+    <button id="clearBackground" aria-label="Clear background">Clear Background</button>
+  </div>
+  <div style="margin-top:0.5rem;display:flex;align-items:center;gap:0.5rem;">
+    <input type="checkbox" id="autoThemeToggle">
+    <label for="autoThemeToggle">Auto theme from background</label>
+  </div>
+  <br>
   <h3>Custom Theme Editor</h3>
   <div id="themeEditor">
     <label for="var-bg">--bg<input id="var-bg" type="color" data-var="--bg"></label>
@@ -65,5 +80,13 @@
 </div>
 
 <script src="js/script.js" defer></script>
+</body>
+
+<!-- Toast for non-blocking actions (undo) -->
+<div id="toast" class="toast" aria-live="polite" aria-atomic="true">
+  <span id="toastMsg"></span>
+  <button id="toastUndo" class="toast-undo" aria-label="Undo">Undo</button>
+</div>
+</html>
 </body>
 </html>

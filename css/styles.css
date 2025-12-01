@@ -8,6 +8,7 @@ body{
   padding:2vh 2vw; font-family:'JetBrains Mono', monospace;
   transition: background 0.5s, color 0.5s;
   background-color: var(--bg);
+  color: var(--fg);
   background-size: cover; background-position: center; background-repeat: no-repeat;
 }
 .translucent-container{
@@ -33,14 +34,14 @@ button:hover{transform:scale(1.05); background:var(--fg);}
 .bm img{width:clamp(24px,5vw,32px); height:auto; transition: transform 0.3s ease;}
 .bm:hover{background:var(--bookmark-hover-bg); transform:scale(1.12);}
 .bm:hover img{transform:scale(1.3);}
-#configModal{position:fixed; top:50%; left:50%; transform:translate(-50%, -50%) scale(0.9); background: var(--secondary); padding:2rem; border-radius:16px; z-index:999; width:95vw; max-width:1400px; max-height:85vh; overflow-y:auto; overflow-x:hidden; box-shadow:0 0 30px rgba(0,0,0,0.5); opacity:0; pointer-events:none; transition: transform 0.3s ease, opacity 0.3s ease;}
+#configModal{position:fixed; top:50%; left:50%; transform:translate(-50%, -50%) scale(0.98); background: rgba(18,20,24,0.92); padding:1.25rem; border-radius:14px; z-index:999; width:92vw; max-width:1100px; max-height:86vh; overflow-y:auto; overflow-x:hidden; box-shadow:0 12px 40px rgba(2,6,23,0.6); opacity:0; pointer-events:none; transition: transform 220ms cubic-bezier(.2,.8,.2,1), opacity 180ms ease; border:1px solid rgba(255,255,255,0.04); backdrop-filter: blur(6px);}
 #configModal.show{opacity:1; transform:translate(-50%, -50%) scale(1); pointer-events:auto;}
 #configModal::-webkit-scrollbar{width:10px;} #configModal::-webkit-scrollbar-track{background: rgba(255,255,255,0.05); border-radius:6px;}
 #configModal::-webkit-scrollbar-thumb{background: rgba(255,255,255,0.2); border-radius:6px;} #configModal::-webkit-scrollbar-thumb:hover{background: rgba(255,255,255,0.4);}
-#bookmarkEditor div{margin-bottom:0.75rem; display:flex; gap:0.75rem; transition: transform 0.2s ease, opacity 0.2s ease; background: rgba(255,255,255,0.05); padding:0.75rem; border-radius:8px; flex-wrap:wrap;}
-#bookmarkEditor div input{flex:1; min-width:120px; padding:0.5rem; border-radius:6px; border:none; background: rgba(255,255,255,0.1);}
-#bookmarkEditor select.positionSelect{width:70px; border-radius:6px; padding:0.3rem; border:none; background: rgba(255,255,255,0.1);}
-.bottom-bar{position:fixed; bottom:0; left:0; width:100%; display:flex; justify-content:space-between; align-items:center; background:var(--secondary); padding:0.5rem 1rem; flex-wrap:wrap;}
+#bookmarkEditor div{margin-bottom:0.6rem; display:flex; gap:0.6rem; transition: transform 0.16s ease, opacity 0.16s ease; background: rgba(255,255,255,0.03); padding:0.6rem; border-radius:10px; flex-wrap:wrap; align-items:center;}
+#bookmarkEditor div input{flex:1; min-width:120px; padding:0.5rem 0.6rem; border-radius:8px; border:1px solid rgba(255,255,255,0.04); background: rgba(255,255,255,0.02); color:var(--fg);} 
+#bookmarkEditor select.positionSelect{width:70px; border-radius:6px; padding:0.3rem; border:none; background: rgba(255,255,255,0.1); color:var(--fg);}
+.bottom-bar{position:fixed; bottom:0; left:0; width:100%; display:flex; justify-content:space-between; align-items:center; background:linear-gradient(90deg, rgba(0,0,0,0.04), rgba(0,0,0,0.02)); padding:0.5rem 1rem; flex-wrap:wrap; backdrop-filter:blur(4px);} 
 .bottom-left{display:flex; align-items:center; gap:1rem;}
 .bottom-center{position:absolute; left:50%; transform:translateX(-50%);}
 .bottom-right{margin-left:auto;}
@@ -65,3 +66,35 @@ button:hover{transform:scale(1.05); background:var(--fg);}
   clip: rect(1px, 1px, 1px, 1px);
   white-space: nowrap; border: 0; padding: 0; margin: -1px;
 }
+
+#configModal h2{display:flex; align-items:center; justify-content:space-between; font-size:1.25rem; margin-bottom:0.5rem;}
+#configModal h3{font-size:1rem; margin-top:0.8rem; margin-bottom:0.5rem; color:var(--fg); opacity:0.95}
+#configModal .section{background:transparent; padding:0.5rem 0; border-bottom:1px solid rgba(255,255,255,0.02);} 
+#configModal .actions-row{display:flex; gap:0.5rem; margin-top:0.6rem;}
+#configModal button{border-radius:8px; padding:0.6rem 0.9rem; font-size:0.95rem}
+#configModal input[type="text"]{padding:0.6rem 0.75rem; border-radius:8px}
+
+/* Background gallery */
+#bgGallery{display:grid; grid-template-columns:repeat(auto-fit,minmax(100px,1fr)); gap:0.5rem; margin-top:0.5rem;}
+.bg-thumb{position:relative; border-radius:8px; overflow:hidden; cursor:pointer; border:2px solid rgba(255,255,255,0.03);}
+.bg-thumb img{width:100%; height:72px; object-fit:cover; display:block; transition: transform 180ms ease;}
+.bg-thumb:hover img{transform:scale(1.04)}
+.bg-thumb.selected{box-shadow:0 6px 18px rgba(0,0,0,0.45); outline:2px solid var(--accent);} 
+.bg-upload-row{display:flex; gap:0.5rem; align-items:center; margin-top:0.5rem;}
+#bgUpload{padding:0.25rem;}
+#clearBackground{padding:0.5rem 0.75rem; border-radius:6px; border:none; background:rgba(255,255,255,0.06); color:inherit; cursor:pointer}
+
+/* actions overlay for uploaded thumbs */
+.bg-thumb .thumb-actions{position:absolute; top:6px; right:6px; display:flex; gap:6px; opacity:0; transition:opacity 0.15s ease;}
+.bg-thumb:hover .thumb-actions, .bg-thumb:focus .thumb-actions, .bg-thumb.selected .thumb-actions{opacity:1}
+.thumb-actions button{background:rgba(0,0,0,0.45); border:none; color:white; padding:6px 8px; border-radius:6px; cursor:pointer; font-size:0.95rem}
+.thumb-actions button[aria-label]{display:inline-flex; align-items:center; justify-content:center}
+
+/* Toast */
+.toast{position:fixed; left:50%; transform:translateX(-50%) translateY(100%); bottom:80px; background:rgba(0,0,0,0.75); color:white; padding:0.5rem 1rem; border-radius:8px; display:flex; gap:0.75rem; align-items:center; box-shadow:0 6px 18px rgba(0,0,0,0.4); transition:transform 220ms ease, opacity 220ms ease; opacity:0; z-index:1200}
+.toast.show{transform:translateX(-50%) translateY(0); opacity:1}
+.toast-undo{background:transparent; border:1px solid rgba(255,255,255,0.2); color:white; padding:0.25rem 0.5rem; border-radius:6px; cursor:pointer}
+.toast-undo:focus{outline:2px solid var(--accent)}
+
+/* rename overlay inside thumbnail */
+/* rename-overlay removed — rename functionality disabled */

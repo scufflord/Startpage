@@ -61,7 +61,39 @@ let bookmarks = JSON.parse(localStorage.getItem('bookmarks')) || [
   {name:"OpenAI", url:"https://openai.com"},
   {name:"Gmail", url:"https://gmail.com"}
 ];
-function getFavicon(url){try{const domain=new URL(url).origin; return `https://www.google.com/s2/favicons?sz=64&domain_url=${domain}`;}catch(e){return '';} }
+function getFavicon(url){
+  try{
+    const host = new URL(url).hostname;
+    if(!host) return '';
+    // Use the `domain` parameter which is more widely supported by the favicon service
+    return `https://www.google.com/s2/favicons?sz=64&domain=${encodeURIComponent(host)}`;
+  }catch(e){
+    return '';
+  }
+}
+
+// Robust favicon loader: try Google, then DuckDuckGo, then a tiny placeholder SVG
+function tryLoadFavicon(img, url){
+  try{
+    const host = new URL(url).hostname;
+    if(!host){ img.src = ''; return; }
+    const google = `https://www.google.com/s2/favicons?sz=64&domain=${encodeURIComponent(host)}`;
+    const ddg = `https://icons.duckduckgo.com/ip3/${encodeURIComponent(host)}.ico`;
+    const placeholder = 'data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="64" height="64"><rect width="100%" height="100%" fill="%23ddd"/><text x="50%" y="50%" font-size="24" text-anchor="middle" alignment-baseline="central" fill="%23666">?</text></svg>';
+
+    // Try DuckDuckGo first to avoid Google redirecting to gstatic (which can 404)
+    img.src = ddg;
+    img.onerror = function(){
+      // fallback -> Google
+      img.onerror = null;
+      img.src = google;
+      img.onerror = function(){ img.onerror = null; img.src = placeholder; };
+    };
+
+    // safety: if image remains zero-sized after short timeout, trigger fallback
+    setTimeout(()=>{ if(img.complete && img.naturalWidth===0){ if(typeof img.onerror === 'function') img.onerror(); } }, 1500);
+  }catch(e){ img.src = ''; }
+}
 
 const bookmarksGrid=document.querySelector('.bookmarks-grid');
 const bookmarkEditor=document.getElementById('bookmarkEditor');
@@ -88,7 +120,9 @@ function renderBookmarks(){
   bookmarks.forEach(b=>{
     const a=document.createElement('a');
     a.href=b.url; a.className='bm'; a.setAttribute('target','_blank'); a.setAttribute('rel','noopener noreferrer');
-    const img = document.createElement('img'); img.src = getFavicon(b.url); img.alt = b.name;
+    const img = document.createElement('img');
+    tryLoadFavicon(img, b.url);
+    img.alt = b.name;
     a.appendChild(img);
     a.appendChild(document.createTextNode(b.name));
     bookmarksGrid.appendChild(a);
@@ -127,7 +161,9 @@ function renderPreview(){
   bookmarks.forEach((b,i)=>{
     const a=document.createElement('div');
     a.className='bm';
-    const img = document.createElement('img'); img.src = getFavicon(b.url); img.alt = b.name;
+    const img = document.createElement('img');
+    tryLoadFavicon(img, b.url);
+    img.alt = b.name;
     a.appendChild(img); a.appendChild(document.createTextNode(b.name));
     previewGrid.appendChild(a);
   });
@@ -143,6 +179,7 @@ function _getFocusable(el){
 
 function openConfigModal(){
   renderEditor();
+  renderGallery && renderGallery();
   if(!configModal) return;
   _previouslyFocused = document.activeElement;
   configModal.classList.add('show');
@@ -223,14 +260,361 @@ if(bookmarkEditor){
 
 // ---------------- Background ----------------
 const savedBg=localStorage.getItem('backgroundURL');
-if(savedBg) document.body.style.backgroundImage=`url('${savedBg}')`;
+let _currentObjectUrl = null;
+async function applySavedBackground(){
+  const saved = localStorage.getItem('backgroundURL');
+  if(!saved){ document.body.style.backgroundImage=''; return; }
+  if(saved.startsWith('db:')){
+    const id = saved.split(':')[1];
+    try{
+      const blob = await getImage(id);
+      if(blob){
+        if(_currentObjectUrl) URL.revokeObjectURL(_currentObjectUrl);
+        _currentObjectUrl = URL.createObjectURL(blob);
+        document.body.style.backgroundImage = `url('${_currentObjectUrl}')`;
+        // ensure text colors update to match the newly-applied background
+        try{ updateDynamicTextColors(); }catch(e){}
+      }
+    }catch(err){ console.warn('Failed to load DB background', err); }
+  } else {
+    if(_currentObjectUrl) { URL.revokeObjectURL(_currentObjectUrl); _currentObjectUrl = null; }
+    document.body.style.backgroundImage=`url('${saved}')`;
+    // ensure text colors update to match the newly-applied background
+    try{ updateDynamicTextColors(); }catch(e){}
+  }
+}
 if(saveBg){ saveBg.addEventListener('click',()=>{
   const urlRaw = bgInput.value.trim();
   if(!urlRaw){ document.body.style.backgroundImage=''; localStorage.removeItem('backgroundURL'); updateDynamicTextColors(); return; }
   const normalized = normalizeUrl(urlRaw);
   if(!normalized){ alert('Background URL appears invalid. Please provide a valid URL.'); return; }
-  document.body.style.backgroundImage = `url('${normalized}')`; localStorage.setItem('backgroundURL', normalized); updateDynamicTextColors();
+  document.body.style.backgroundImage = `url('${normalized}')`; localStorage.setItem('backgroundURL', normalized); updateDynamicTextColors(); maybeAutoThemeOnSet(normalized);
 }); }
+
+// ---------------- Background Gallery & Upload ----------------
+const bgGallery = document.getElementById('bgGallery');
+const bgUpload = document.getElementById('bgUpload');
+const clearBgBtn = document.getElementById('clearBackground');
+const autoThemeToggle = document.getElementById('autoThemeToggle');
+
+// Curated sample backgrounds (replace or expand as desired)
+const curatedBackgrounds = [
+  'https://picsum.photos/id/1015/1600/1000',
+  'https://picsum.photos/id/1016/1600/1000',
+  'https://picsum.photos/id/1025/1600/1000',
+  'https://picsum.photos/id/1035/1600/1000',
+  'https://picsum.photos/id/1043/1600/1000'
+];
+
+function renderGallery(){
+  if(!bgGallery) return;
+  bgGallery.innerHTML = '';
+  const current = localStorage.getItem('backgroundURL') || '';
+  // first render uploaded images from IndexedDB (if any)
+  (async function(){
+    try{
+      const uploaded = await getAllImages();
+      for(const item of uploaded){
+        const url = URL.createObjectURL(item.blob);
+        const thumb = document.createElement('div');
+        thumb.tabIndex = 0;
+        thumb.role = 'button';
+        thumb.className = 'bg-thumb';
+        thumb.dataset.dbId = String(item.id);
+        const img = document.createElement('img'); img.src = url; img.alt = item.name || 'Uploaded background';
+        thumb.appendChild(img);
+
+        // actions overlay (delete only)
+        const actions = document.createElement('div'); actions.className = 'thumb-actions';
+        const deleteBtn = document.createElement('button'); deleteBtn.type='button'; deleteBtn.title='Delete'; deleteBtn.innerText='✕'; deleteBtn.setAttribute('aria-label','Delete uploaded background');
+        actions.appendChild(deleteBtn);
+        thumb.appendChild(actions);
+
+        if(current && current === `db:${item.id}`) thumb.classList.add('selected');
+
+        // click to select
+        thumb.addEventListener('click', (e)=>{
+          // if click originated from an action button, ignore
+          if(e.target === deleteBtn) return;
+          document.body.style.backgroundImage = `url('${url}')`;
+          localStorage.setItem('backgroundURL', `db:${item.id}`);
+          updateDynamicTextColors();
+          maybeAutoThemeOnSet(`db:${item.id}`);
+          document.querySelectorAll('.bg-thumb').forEach(t=>t.classList.remove('selected'));
+          thumb.classList.add('selected');
+        });
+
+        // delete handler (immediate delete with undo via toast)
+        deleteBtn.addEventListener('click', async (ev)=>{
+          ev.stopPropagation();
+          try{
+            // cache blob & name for undo
+            const blob = item.blob;
+            const name = item.name;
+            const wasSelected = (localStorage.getItem('backgroundURL') === `db:${item.id}`);
+            // delete now
+            await deleteImage(item.id);
+            // clear background if it was selected
+            if(wasSelected){ localStorage.removeItem('backgroundURL'); if(_currentObjectUrl){ URL.revokeObjectURL(_currentObjectUrl); _currentObjectUrl = null; } document.body.style.backgroundImage=''; }
+            renderGallery(); updateDynamicTextColors();
+
+            // show toast with undo
+            showToast('Background deleted', async ()=>{
+              try{
+                const newId = await addImage(blob, name || 'Uploaded image');
+                // if it was previously selected, restore selection
+                if(wasSelected){ localStorage.setItem('backgroundURL', `db:${newId}`); await applySavedBackground(); }
+                // try to auto-theme from restored image
+                if(wasSelected){ maybeAutoThemeOnSet(`db:${newId}`); }
+                renderGallery(); updateDynamicTextColors();
+              }catch(err){ console.error('Undo failed', err); }
+            });
+          }catch(err){ alert('Failed to delete image'); }
+        });
+
+        bgGallery.appendChild(thumb);
+      }
+    }catch(err){ console.warn('Could not load uploaded backgrounds', err); }
+    // then curated backgrounds
+    curatedBackgrounds.forEach(url=>{
+      const thumb = document.createElement('button');
+      thumb.type = 'button'; thumb.className = 'bg-thumb';
+      const img = document.createElement('img'); img.src = url; img.alt = 'Background option';
+      thumb.appendChild(img);
+      if(current && current === url) thumb.classList.add('selected');
+      thumb.addEventListener('click', ()=>{
+        document.body.style.backgroundImage = `url('${url}')`;
+        localStorage.setItem('backgroundURL', url);
+        updateDynamicTextColors();
+        maybeAutoThemeOnSet(url);
+        // refresh selection
+        document.querySelectorAll('.bg-thumb').forEach(t=>t.classList.remove('selected'));
+        thumb.classList.add('selected');
+      });
+      bgGallery.appendChild(thumb);
+    });
+  })();
+}
+
+    // ---------------- Auto-theming from background ----------------
+    const AUTO_THEME_KEY = 'autoThemeEnabled';
+    function isAutoThemeEnabled(){ return localStorage.getItem(AUTO_THEME_KEY) === '1'; }
+    if(autoThemeToggle){
+      autoThemeToggle.checked = isAutoThemeEnabled();
+      autoThemeToggle.addEventListener('change', ()=>{
+        localStorage.setItem(AUTO_THEME_KEY, autoThemeToggle.checked ? '1' : '0');
+        if(autoThemeToggle.checked){
+          const current = localStorage.getItem('backgroundURL');
+          if(current) applyThemeFromBackgroundRef(current);
+        }
+      });
+    }
+
+    async function applyThemeFromBackgroundRef(ref){
+      if(!isAutoThemeEnabled()) return;
+      try{
+        if(!ref) return;
+        if(ref.startsWith('db:')){
+          const id = ref.split(':')[1];
+          const blob = await getImage(id);
+          if(!blob) return;
+          const obj = URL.createObjectURL(blob);
+          await applyThemeFromImage(obj, true);
+          URL.revokeObjectURL(obj);
+        } else {
+          await applyThemeFromImage(ref, true);
+        }
+      }catch(err){ console.warn('Auto-theme failed', err); }
+    }
+
+    async function applyThemeFromImage(src, force=false){
+      if(!isAutoThemeEnabled() && !force) return;
+      return new Promise((resolve)=>{
+        const img = new Image();
+        img.crossOrigin = 'Anonymous';
+        img.onload = function(){
+          try{
+            const w = Math.min(200, img.naturalWidth);
+            const h = Math.min(200, img.naturalHeight);
+            const canvas = document.createElement('canvas');
+            canvas.width = w; canvas.height = h;
+            const ctx = canvas.getContext('2d');
+            ctx.drawImage(img, 0, 0, w, h);
+            let data;
+            try{ data = ctx.getImageData(0,0,w,h).data; }catch(e){ console.warn('CORS or tainted canvas, cannot extract colors'); resolve(); return; }
+
+            const counts = new Map();
+            for(let i=0;i<data.length;i+=4){
+              const r = data[i]>>4; const g = data[i+1]>>4; const b = data[i+2]>>4; const a = data[i+3];
+              if(a < 125) continue;
+              const key = (r<<8) | (g<<4) | b;
+              counts.set(key, (counts.get(key)||0)+1);
+            }
+            const entries = Array.from(counts.entries()).sort((a,b)=>b[1]-a[1]);
+            if(entries.length===0){ resolve(); return; }
+            const toRgb = (key)=>{
+              const r = (key>>8)&0xF; const g = (key>>4)&0xF; const b = key&0xF;
+              return [ (r<<4)|(r), (g<<4)|(g), (b<<4)|(b) ];
+            };
+            const top = entries.slice(0,6).map(e=>toRgb(e[0]));
+            const primary = top[0];
+            const lum = getLuminance(primary[0], primary[1], primary[2]);
+            const fg = lum > 0.5 ? '#111111' : '#ffffff';
+            const saturations = top.map(rgb=>{ const max=Math.max(...rgb); const min=Math.min(...rgb); return (max===0?0:(max-min)/max); });
+            let accIdx = saturations.indexOf(Math.max(...saturations)); if(accIdx<0) accIdx=1<top.length?1:0;
+            const accentRgb = top[accIdx] || top[0];
+            const accent = `rgb(${accentRgb[0]}, ${accentRgb[1]}, ${accentRgb[2]})`;
+            const secondaryRgb = primary.map(v=> Math.round(v*0.7 + 40));
+            const secondary = `rgb(${secondaryRgb[0]}, ${secondaryRgb[1]}, ${secondaryRgb[2]})`;
+
+            document.documentElement.style.setProperty('--bg', `rgb(${primary[0]}, ${primary[1]}, ${primary[2]})`);
+            document.documentElement.style.setProperty('--fg', fg);
+            document.documentElement.style.setProperty('--accent', accent);
+            document.documentElement.style.setProperty('--secondary', secondary);
+            document.documentElement.style.setProperty('--bookmark-bg', `rgba(${primary[0]}, ${primary[1]}, ${primary[2]}, 0.08)`);
+            document.documentElement.style.setProperty('--bookmark-hover-bg', `rgba(${primary[0]}, ${primary[1]}, ${primary[2]}, 0.18)`);
+            localStorage.setItem('derivedTheme', JSON.stringify({
+              '--bg': `rgb(${primary[0]}, ${primary[1]}, ${primary[2]})`, '--fg': fg, '--accent': accent, '--secondary': secondary,
+              '--bookmark-bg': `rgba(${primary[0]}, ${primary[1]}, ${primary[2]}, 0.08)`, '--bookmark-hover-bg': `rgba(${primary[0]}, ${primary[1]}, ${primary[2]}, 0.18)`
+            }));
+
+            updateDynamicTextColors();
+            resolve();
+          }catch(err){ console.error('Palette extraction error', err); resolve(); }
+        };
+        img.onerror = function(){ console.warn('Image failed to load for theming', src); resolve(); };
+        img.src = src;
+      });
+    }
+
+    function maybeAutoThemeOnSet(ref){ if(isAutoThemeEnabled()){ applyThemeFromBackgroundRef(ref); } }
+
+// ---------------- IndexedDB helper for uploaded images ----------------
+const IDB_NAME = 'startpage-images';
+const IDB_STORE = 'images';
+let _dbPromise = null;
+
+function initDB(){
+  if(_dbPromise) return _dbPromise;
+  _dbPromise = new Promise((resolve, reject)=>{
+    const req = indexedDB.open(IDB_NAME, 1);
+    req.onupgradeneeded = function(e){
+      const db = e.target.result;
+      if(!db.objectStoreNames.contains(IDB_STORE)) db.createObjectStore(IDB_STORE, {keyPath:'id', autoIncrement:true});
+    };
+    req.onsuccess = function(e){ resolve(e.target.result); };
+    req.onerror = function(e){ reject(e.target.error); };
+  });
+  return _dbPromise;
+}
+
+async function addImage(blob, name){
+  const db = await initDB();
+  return new Promise((resolve, reject)=>{
+    const tx = db.transaction(IDB_STORE, 'readwrite');
+    const store = tx.objectStore(IDB_STORE);
+    const rec = {blob: blob, name: name, created: Date.now()};
+    const r = store.add(rec);
+    r.onsuccess = function(ev){ resolve(ev.target.result); };
+    r.onerror = function(ev){ reject(ev.target.error); };
+  });
+}
+
+async function getImage(id){
+  const db = await initDB();
+  return new Promise((resolve, reject)=>{
+    const tx = db.transaction(IDB_STORE, 'readonly');
+    const store = tx.objectStore(IDB_STORE);
+    const r = store.get(Number(id));
+    r.onsuccess = function(ev){ resolve(ev.target.result?.blob); };
+    r.onerror = function(ev){ reject(ev.target.error); };
+  });
+}
+
+async function getAllImages(){
+  const db = await initDB();
+  return new Promise((resolve, reject)=>{
+    const tx = db.transaction(IDB_STORE, 'readonly');
+    const store = tx.objectStore(IDB_STORE);
+    const out = [];
+    const req = store.openCursor(null, 'prev');
+    req.onsuccess = function(e){
+      const cur = e.target.result;
+      if(cur){ out.push({id: cur.primaryKey, blob: cur.value.blob, name: cur.value.name}); cur.continue(); }
+      else resolve(out);
+    };
+    req.onerror = function(e){ reject(e.target.error); };
+  });
+}
+
+// initialize DB early
+initDB().catch(err=>console.warn('IndexedDB not available', err));
+
+// ---------------- image management helpers ----------------
+async function deleteImage(id){
+  const db = await initDB();
+  return new Promise((resolve, reject)=>{
+    const tx = db.transaction(IDB_STORE, 'readwrite');
+    const store = tx.objectStore(IDB_STORE);
+    const r = store.delete(Number(id));
+    r.onsuccess = ()=>resolve(); r.onerror = (e)=>reject(e.target.error);
+  });
+}
+
+// renameImage removed — rename functionality intentionally disabled
+
+// ---------------- Toast (undo) ----------------
+const toast = document.getElementById('toast');
+const toastMsg = document.getElementById('toastMsg');
+const toastUndo = document.getElementById('toastUndo');
+let _toastTimer = null;
+function showToast(message, undoCallback, timeout=6000){
+  if(!toast) return;
+  toastMsg.textContent = message;
+  toast.classList.add('show');
+  // clear previous
+  if(_toastTimer) clearTimeout(_toastTimer);
+  const clear = ()=>{ toast.classList.remove('show'); if(_toastTimer){ clearTimeout(_toastTimer); _toastTimer = null; } };
+  _toastTimer = setTimeout(()=>{ clear(); }, timeout);
+  // setup undo
+  function onUndo(){ if(undoCallback) undoCallback(); clear(); toastUndo.removeEventListener('click', onUndo); }
+  toastUndo.addEventListener('click', onUndo, {once:true});
+}
+
+if(bgUpload){
+  bgUpload.addEventListener('change', async (e)=>{
+    const file = e.target.files && e.target.files[0];
+    if(!file) return;
+    if(!file.type.startsWith('image/')){ alert('Please upload an image file.'); return; }
+    try{
+      // store blob in IndexedDB
+      const id = await addImage(file, file.name || 'Uploaded image');
+      // set background to DB id
+      localStorage.setItem('backgroundURL', `db:${id}`);
+      const blob = await getImage(id);
+      const objUrl = URL.createObjectURL(blob);
+      document.body.style.backgroundImage = `url('${objUrl}')`;
+      updateDynamicTextColors();
+      maybeAutoThemeOnSet(`db:${id}`);
+      // re-render gallery to include uploaded image
+      renderGallery();
+    }catch(err){
+      console.error(err);
+      alert('Unable to save uploaded image.');
+    }
+  });
+}
+
+if(clearBgBtn){
+  clearBgBtn.addEventListener('click', ()=>{
+    document.body.style.backgroundImage = '';
+    localStorage.removeItem('backgroundURL');
+    if(_currentObjectUrl){ URL.revokeObjectURL(_currentObjectUrl); _currentObjectUrl = null; }
+    updateDynamicTextColors();
+    if(bgUpload) bgUpload.value = '';
+    document.querySelectorAll('.bg-thumb').forEach(t=>t.classList.remove('selected'));
+  });
+}
 
 // ---------------- Custom theme editor ----------------
 document.querySelectorAll('#themeEditor input').forEach(input=>{
@@ -260,12 +644,18 @@ function updateDynamicTextColors(){
   const rgb = bgColor.match(/\d+/g)?.map(Number) || [40,40,40];
   const lum = getLuminance(rgb[0], rgb[1], rgb[2]);
   const color = lum>0.5 ? '#1a1a1a' : '#ebdbb2';
-  
-  document.body.style.color = color;
-  document.querySelectorAll('.bm').forEach(b=>b.style.color=color);
-  document.querySelectorAll('input, select, button').forEach(el=>el.style.color=color);
+  // set CSS variable so components and inputs pick up theme consistently
+  try{ document.documentElement.style.setProperty('--fg', color); }catch(e){}
+  // ensure bookmark items use the computed color as fallback
+  document.querySelectorAll('.bm').forEach(b=>{ b.style.color = 'var(--fg)'; });
 }
 
 // Initial render
 renderBookmarks();
 updateDynamicTextColors();
+
+// Apply saved background and auto-theme after all helpers/constants
+// have been declared (avoids temporal-dead-zone ReferenceErrors).
+applySavedBackground();
+// apply auto-theme at startup if enabled
+maybeAutoThemeOnSet(localStorage.getItem('backgroundURL'));
