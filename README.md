@@ -1,4 +1,4 @@
-# Startpage
+# dotStart
 
 A modern, feature-rich personal startpage with theming, bookmarks, weather, background gallery, greeting customization, and keyboard shortcuts.
 
