@@ -9,7 +9,7 @@ A modern, feature-rich personal startpage with theming, bookmarks, weather, back
   python3 -m http.server 8000
   # Then visit http://localhost:8000
   ```
-- Customize everything via the **Config** button
+- Customize everything via the **Config** button  
 - Bookmarks are auto-saved to `localStorage`
 
 ## What is This Project?
