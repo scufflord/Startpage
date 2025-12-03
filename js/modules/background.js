@@ -95,10 +95,20 @@
   // initialize DB early (best-effort)
   try{ initDB().catch(()=>{}); }catch(e){}
 
+  // Utility: toggle a body class when a custom background is active. This
+  // allows CSS to target widgets and other UI elements to improve contrast
+  // when a full-page image is present.
+  function setHasCustomBackground(v){
+    try{
+      if(v) document.body.classList.add('bg-custom');
+      else document.body.classList.remove('bg-custom');
+    }catch(e){}
+  }
+
   // ---------------- Apply background ----------------
   async function applySavedBackground(){
     const saved = localStorage.getItem(STORAGE_KEY);
-    if(!saved){ document.body.style.backgroundImage=''; return; }
+    if(!saved){ document.body.style.backgroundImage=''; setHasCustomBackground(false); return; }
     if(saved.startsWith('db:')){
       const id = saved.split(':')[1];
       // ------------------ Background & gallery module ------------------
@@ -144,12 +154,13 @@
     // If the saved reference is a DB reference, try to load the blob and apply
     try{
       const blob = await getImage(Number(id));
-      if(blob){ if(_currentObjectUrl){ URL.revokeObjectURL(_currentObjectUrl); _currentObjectUrl = null; } _currentObjectUrl = URL.createObjectURL(blob); document.body.style.backgroundImage = `url('${_currentObjectUrl}')`; }
+      if(blob){ if(_currentObjectUrl){ URL.revokeObjectURL(_currentObjectUrl); _currentObjectUrl = null; } _currentObjectUrl = URL.createObjectURL(blob); document.body.style.backgroundImage = `url('${_currentObjectUrl}')`; setHasCustomBackground(true); }
       return;
     }catch(e){ console.warn('Failed to load background blob', e); return; }
   }
   // otherwise it's a plain URL
   try{ document.body.style.backgroundImage = `url('${saved}')`; }catch(e){ document.body.style.backgroundImage = ''; }
+  setHasCustomBackground(true);
 }
 
 // renderGallery - build the background gallery UI including uploaded
@@ -291,7 +302,7 @@ async function renderGallery(){
     if(!urlRaw){ document.body.style.backgroundImage=''; localStorage.removeItem(STORAGE_KEY); try{ window.updateDynamicTextColors(); }catch(e){} return; }
     const normalized = window.normalizeUrl ? window.normalizeUrl(urlRaw) : urlRaw;
     if(!normalized){ alert('Background URL appears invalid. Please provide a valid URL.'); return; }
-    document.body.style.backgroundImage = `url('${normalized}')`; localStorage.setItem(STORAGE_KEY, normalized); try{ window.updateDynamicTextColors(); }catch(e){} maybeAutoThemeOnSet(normalized); renderGallery();
+    document.body.style.backgroundImage = `url('${normalized}')`; localStorage.setItem(STORAGE_KEY, normalized); try{ window.updateDynamicTextColors(); }catch(e){} maybeAutoThemeOnSet(normalized); setHasCustomBackground(true); renderGallery();
   }); }
 
   if(bgUpload){
@@ -301,7 +312,7 @@ async function renderGallery(){
         const id = await addImage(file, file.name || 'Uploaded image');
         localStorage.setItem(STORAGE_KEY, `db:${id}`);
         const blob = await getImage(id); const objUrl = URL.createObjectURL(blob);
-        document.body.style.backgroundImage = `url('${objUrl}')`; try{ window.updateDynamicTextColors(); }catch(e){}
+        document.body.style.backgroundImage = `url('${objUrl}')`; try{ window.updateDynamicTextColors(); }catch(e){} setHasCustomBackground(true);
         maybeAutoThemeOnSet(`db:${id}`);
         renderGallery();
       }catch(err){ console.error(err); alert('Unable to save uploaded image.'); }
@@ -316,6 +327,7 @@ async function renderGallery(){
       try{ window.updateDynamicTextColors(); }catch(e){}
       if(bgUpload) bgUpload.value = '';
       document.querySelectorAll('.bg-thumb').forEach(t=>t.classList.remove('selected'));
+      setHasCustomBackground(false);
     });
   }
 

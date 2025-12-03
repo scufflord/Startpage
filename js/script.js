@@ -308,6 +308,60 @@ const savedCustom=JSON.parse(localStorage.getItem('customTheme')||'{}'); for(let
 if(window.renderBookmarks) window.renderBookmarks();
 if(typeof updateDynamicTextColors === 'function') updateDynamicTextColors();
 
+// ---------------- Theme presets ----------------
+const THEME_KEY = 'selectedTheme';
+const PRESET_THEMES = {
+  gruvbox: {
+    '--bg': '#282828', '--fg': '#ebdbb2', '--accent': '#d79921', '--secondary': '#504945',
+    '--bookmark-bg': 'rgba(235,219,178,0.08)', '--bookmark-hover-bg': 'rgba(235,219,178,0.18)'
+  },
+  darkOcean: {
+    '--bg': '#0f1724', '--fg': '#dbeafe', '--accent': '#22c1c3', '--secondary': '#162238',
+    '--bookmark-bg': 'rgba(219,234,254,0.06)', '--bookmark-hover-bg': 'rgba(219,234,254,0.12)'
+  },
+  solarized: {
+    '--bg': '#002b36', '--fg': '#93a1a1', '--accent': '#b58900', '--secondary': '#073642',
+    '--bookmark-bg': 'rgba(147,161,161,0.06)', '--bookmark-hover-bg': 'rgba(147,161,161,0.12)'
+  },
+  catppuccinMocha: {
+    '--bg': '#1e1b1d', '--fg': '#f5e0dc', '--accent': '#f28fad', '--secondary': '#2a2628',
+    '--bookmark-bg': 'rgba(245,224,220,0.06)', '--bookmark-hover-bg': 'rgba(245,224,220,0.12)'
+  },
+  catppuccinLatte: {
+    '--bg': '#fbf1c7', '--fg': '#403233', '--accent': '#b4637a', '--secondary': '#f2e5c9',
+    '--bookmark-bg': 'rgba(64,50,51,0.06)', '--bookmark-hover-bg': 'rgba(64,50,51,0.12)'
+  },
+  catppuccinFrappe: {
+    '--bg': '#303446', '--fg': '#c6d0f5', '--accent': '#c6a0f6', '--secondary': '#2b2f3a',
+    '--bookmark-bg': 'rgba(198,208,245,0.06)', '--bookmark-hover-bg': 'rgba(198,208,245,0.12)'
+  }
+};
+
+function applyPresetTheme(name){
+  const theme = PRESET_THEMES[name];
+  if(!theme) return;
+  Object.keys(theme).forEach(k => document.documentElement.style.setProperty(k, theme[k]));
+  try{ updateDynamicTextColors(); }catch(e){}
+}
+
+function loadSavedTheme(){
+  const sel = localStorage.getItem(THEME_KEY) || 'gruvbox';
+  const selectEl = document.getElementById('themeSelector');
+  if(selectEl) selectEl.value = sel;
+  applyPresetTheme(sel);
+}
+
+const themeSelector = document.getElementById('themeSelector');
+if(themeSelector){
+  themeSelector.addEventListener('change', (e)=>{
+    const val = themeSelector.value;
+    localStorage.setItem(THEME_KEY, val);
+    applyPresetTheme(val);
+  });
+}
+
+loadSavedTheme();
+
 // ========== WIDGETS: TODO LIST =========
 const todoInput = document.getElementById('todoInput');
 const todoAdd = document.getElementById('todoAdd');

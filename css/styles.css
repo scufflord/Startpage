@@ -207,6 +207,15 @@ button:hover{transform:scale(1.05); background:var(--fg);}
   max-width: 400px;
 }
 
+/* When a custom background image is applied to the page, increase widget
+   contrast by making widget containers opaque. The `bg-custom` class is
+   added/removed on `document.body` by the background module. */
+.bg-custom .widget{
+  background: rgba(18,20,24,0.92);
+  border-color: rgba(255,255,255,0.08);
+  backdrop-filter: none;
+}
+
 .widget[style*="position: fixed"]{
   transition: none;
   max-width: none;
