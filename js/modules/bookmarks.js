@@ -39,8 +39,7 @@
     bookmarksGrid.innerHTML = '';
     bookmarks.forEach(b => {
       const a = document.createElement('a');
-      a.href = b.url; a.className = 'bm'; a.setAttribute('target', '_blank'); 
-      a.setAttribute('rel', 'noopener noreferrer'); // Added rel attribute for security
+      a.href = b.url; a.className = 'bm';
       const img = document.createElement('img');
       // tryLoadFavicon is provided by utils module
       if(window.tryLoadFavicon) window.tryLoadFavicon(img, b.url);

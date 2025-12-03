@@ -31,6 +31,7 @@ setInterval(updateClock,1000); updateClock();
 const searchEngines = {
   google: 'https://www.google.com/search?q={q}',
   ddg: 'https://duckduckgo.com/?q={q}',
+  ecosia: 'https://www.ecosia.org/search?q={q}',
   bing: 'https://www.bing.com/search?q={q}',
   startpage: 'https://www.startpage.com/do/search?q={q}',
   brave: 'https://search.brave.com/search?q={q}',
@@ -40,6 +41,7 @@ const searchEngines = {
 const searchEngineFavicons = {
   google: 'https://www.google.com/favicon.ico',
   ddg: 'https://duckduckgo.com/favicon.ico',
+  ecosia: 'https://www.ecosia.org/favicon.ico',
   bing: 'https://www.bing.com/favicon.ico',
   startpage: 'https://www.startpage.com/favicon.ico',
   brave: 'https://brave.com/static-assets/images/brave-favicon.png',
@@ -136,7 +138,7 @@ if(searchForm){
     const template = getSearchTemplate();
     const url = template.replace('{q}', encodeURIComponent(query));
     
-    window.open(url, '_blank', 'noopener,noreferrer');
+    window.location.href = url;
   });
 }
 
@@ -220,17 +222,10 @@ document.addEventListener('keydown', (e)=>{
     const b = bm[idx];
     if(!b || !b.url) return;
     const normalized = normalizeUrl(b.url) || b.url;
-    // open safely using an anchor click to set rel="noopener noreferrer"
-    const a = document.createElement('a');
-    a.href = normalized;
-    a.target = '_blank';
-    a.rel = 'noopener noreferrer';
-    a.style.display = 'none';
-    document.body.appendChild(a);
-    a.click();
-    a.remove();
+    // navigate in same tab
+    window.location.href = normalized;
     // show a short toast confirming the hotkey action (uses existing showToast)
-    try{ showToast('Opened ' + (b.name || normalized) + ' (' + key + ')', null, 2000); }catch(ex){}
+    try{ showToast('Opening ' + (b.name || normalized) + ' (' + key + ')', null, 2000); }catch(ex){}
     e.preventDefault();
   }catch(err){ /* swallow */ }
 });
