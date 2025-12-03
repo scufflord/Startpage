@@ -38,8 +38,8 @@
     if(!lat || !lon) return setWeatherText('No location set');
     setWeatherText('Loading weather...');
     try{
-      // Request metric units (Celsius, km/h) and current weather
-      const url = `https://api.open-meteo.com/v1/forecast?latitude=${encodeURIComponent(lat)}&longitude=${encodeURIComponent(lon)}&current_weather=true&temperature_unit=celsius&windspeed_unit=kmh`;
+      // Request metric units (Celsius, km/h), current weather, and hourly precipitation probability
+      const url = `https://api.open-meteo.com/v1/forecast?latitude=${encodeURIComponent(lat)}&longitude=${encodeURIComponent(lon)}&current_weather=true&hourly=precipitation_probability&temperature_unit=celsius&windspeed_unit=kmh&forecast_days=1`;
       const res = await fetch(url);
       if(!res.ok) throw new Error('HTTP ' + res.status);
       const j = await res.json();
@@ -52,6 +52,26 @@
       // convert to other units for convenience
       const tF = Math.round(tC * 9/5 + 32);
       const wMph = Math.round(wKmh * 0.621371);
+      
+      // Get current precipitation probability (from hourly data, use current hour)
+      let precipProb = null;
+      if(j.hourly && j.hourly.time && j.hourly.precipitation_probability){
+        const now = new Date().toISOString();
+        const currentHour = now.substring(0, 13) + ':00';
+        const hourIndex = j.hourly.time.findIndex(t => t.startsWith(currentHour.substring(0, 13)));
+        if(hourIndex >= 0 && j.hourly.precipitation_probability[hourIndex] !== null){
+          precipProb = j.hourly.precipitation_probability[hourIndex];
+        }
+      }
+      
+      // Convert wind direction from degrees to cardinal direction
+      function degreesToCardinal(degrees){
+        if(degrees === undefined || degrees === null) return '';
+        const directions = ['N', 'NNE', 'NE', 'ENE', 'E', 'ESE', 'SE', 'SSE', 'S', 'SSW', 'SW', 'WSW', 'W', 'WNW', 'NW', 'NNW'];
+        const index = Math.round(degrees / 22.5) % 16;
+        return directions[index];
+      }
+      const windDir = degreesToCardinal(dir);
 
       // Map numeric Open‑Meteo weather codes to short human phrases used in the UI
       const wc = typeof cur.weathercode !== 'undefined' ? Number(cur.weathercode) : null;
@@ -70,7 +90,8 @@
 
       // Friendly output: show both metric and imperial units and a short condition
       const parts = [`${Math.round(tC)}°C (${tF}°F)`, `${Math.round(wKmh)} km/h (${wMph} mph)`];
-      if(dir !== undefined && dir !== null) parts.push(`${Math.round(dir)}°`);
+      if(windDir) parts.push(windDir);
+      if(precipProb !== null) parts.push(`${Math.round(precipProb)}% precip`);
       if(cond) parts.push(cond);
       setWeatherText(parts.join(' • '));
     }catch(err){
