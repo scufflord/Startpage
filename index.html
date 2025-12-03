@@ -111,9 +111,14 @@
     <input type="file" id="bgUpload" accept="image/*">
     <button id="clearBackground" aria-label="Clear background">Clear Background</button>
   </div>
-  <div style="margin-top:0.5rem;display:flex;align-items:center;gap:0.5rem;">
-    <input type="checkbox" id="autoThemeToggle">
-    <label for="autoThemeToggle">Auto theme from background</label>
+  <div style="margin-top:0.5rem;">
+    <label for="autoThemeToggle" class="toggle-label">
+      <div class="toggle-switch">
+        <input type="checkbox" id="autoThemeToggle">
+        <span class="toggle-slider"></span>
+      </div>
+      <span>Auto theme from background</span>
+    </label>
   </div>
   <br>
   <h3>Weather Settings</h3>
@@ -184,12 +189,18 @@
   <h3>Widgets</h3>
   <div class="section">
     <div style="display:flex;gap:1rem;flex-direction:column;">
-      <label style="display:flex;align-items:center;gap:0.5rem;">
-        <input type="checkbox" id="todoWidgetToggle" aria-label="Toggle todo widget">
+      <label for="todoWidgetToggle" class="toggle-label">
+        <div class="toggle-switch">
+          <input type="checkbox" id="todoWidgetToggle" aria-label="Toggle todo widget">
+          <span class="toggle-slider"></span>
+        </div>
         <span>Show Todo Widget</span>
       </label>
-      <label style="display:flex;align-items:center;gap:0.5rem;">
-        <input type="checkbox" id="newsWidgetToggle" aria-label="Toggle news widget">
+      <label for="newsWidgetToggle" class="toggle-label">
+        <div class="toggle-switch">
+          <input type="checkbox" id="newsWidgetToggle" aria-label="Toggle news widget">
+          <span class="toggle-slider"></span>
+        </div>
         <span>Show News Widget</span>
       </label>
     </div>

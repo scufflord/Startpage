@@ -178,21 +178,22 @@ function(){
       ev.preventDefault && ev.preventDefault();
       ev.stopPropagation && ev.stopPropagation();
       // remove focus from the handle/button which can cause small layout
-      // shifts in some browsers (focus outlines or active styles) and
-      // produce a visible 'jump' when we switch to fixed positioning.
+      // shifts in some browsers (focus outlines or active styles).
       try{ handle.blur && handle.blur(); if(document.activeElement) document.activeElement.blur && document.activeElement.blur(); }catch(e){}
       const rectBefore = el.getBoundingClientRect();
-      // Store the initial pointer position and widget position
+      // Store the initial pointer position and widget position. We keep
+      // the widget in its original layout position during the drag and
+      // only use CSS transform for visual movement to avoid layout shifts.
       el._dragStartX = ev.clientX;
       el._dragStartY = ev.clientY;
       el._dragInitialLeft = rectBefore.left;
       el._dragInitialTop = rectBefore.top;
-      // lock the current width
+      // Lock the current width to prevent expansion when converted to fixed.
       try{
         el.style.width = rectBefore.width + 'px';
         el.style.maxWidth = rectBefore.width + 'px';
       }catch(e){}
-      // Don't change position mode yet - just mark as dragging
+      // Mark as dragging but don't change position mode yet
       el.classList.add('dragging');
       document.body.classList.add('dragging-widget');
       dragging = true;
@@ -204,7 +205,10 @@ function(){
       // Calculate how far the pointer has moved from the drag start
       const deltaX = ev.clientX - el._dragStartX;
       const deltaY = ev.clientY - el._dragStartY;
-      // Use CSS transform to move the widget visually (doesn't change layout)
+      // Use CSS transform to move the widget visually without triggering
+      // layout changes. The widget stays in its original layout position
+      // and only moves visually, preventing the jump that occurs when
+      // switching between position modes during an active drag.
       el.style.transform = `translate(${deltaX}px, ${deltaY}px)`;
       // Set z-index to bring it above other content while dragging
       el.style.zIndex = '9999';
@@ -219,17 +223,21 @@ function(){
         // Get the current visual position of the widget (with transform applied)
         const rectBefore = el.getBoundingClientRect();
         
-        // Switch to position:fixed temporarily to measure the shift
+        // Switch to position:fixed and set coordinates. Due to container
+        // padding/layout, the widget will shift when switching from its
+        // original layout position to fixed positioning.
         el.style.position = 'fixed';
         el.style.left = rectBefore.left + 'px';
         el.style.top = rectBefore.top + 'px';
         el.style.margin = '0';
         el.style.transform = '';
         
-        // Measure where it actually ended up
+        // Measure where it actually rendered after the position change
         const rectAfter = el.getBoundingClientRect();
         
-        // Calculate the shift and compensate
+        // Calculate the shift caused by position:fixed and compensate by
+        // subtracting it from the coordinates. This keeps the widget exactly
+        // where the user dropped it visually.
         const shiftX = rectAfter.left - rectBefore.left;
         const shiftY = rectAfter.top - rectBefore.top;
         
@@ -240,7 +248,7 @@ function(){
         el.style.top = correctedTop + 'px';
         el.style.zIndex = '';
         
-        // Save the position
+        // Save the corrected position to localStorage
         const positions = loadWidgetPositions();
         positions[el.id] = { left: correctedLeft, top: correctedTop };
         saveWidgetPositions(positions);
