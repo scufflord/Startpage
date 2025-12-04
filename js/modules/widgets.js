@@ -63,10 +63,8 @@ function(){
   // ---------------- News (RSS) ----------------
   const RSS_FEEDS = [
     'https://feeds.reuters.com/reuters/technologyNews',
-    'https://feeds.bloomberg.com/markets/news.rss',
     'https://feeds.cnbc.com/cnbc/world-news',
     'https://feeds.washingtonpost.com/rss/politics',
-    'https://feeds.bloomberg.com/technology/news.rss',
     'https://feeds.theguardian.com/world',
     'https://feeds.nytimes.com/services/xml/rss/nyt/Technology.xml',
     'https://feeds.arstechnica.com/arstechnica/feed',
