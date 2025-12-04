@@ -284,7 +284,8 @@ async function renderGallery(){
             '--bg': `rgb(${primary[0]}, ${primary[1]}, ${primary[2]})`, '--fg': fg, '--accent': accent, '--secondary': secondary,
             '--bookmark-bg': `rgba(${primary[0]}, ${primary[1]}, ${primary[2]}, 0.08)`, '--bookmark-hover-bg': `rgba(${primary[0]}, ${primary[1]}, ${primary[2]}, 0.18)`
           }));
-          try{ window.updateDynamicTextColors(); }catch(e){}
+          // Don't call updateDynamicTextColors here since we've already calculated
+          // the optimal fg color based on the image palette
           resolve();
         }catch(err){ console.error('Palette extraction error', err); resolve(); }
       };
